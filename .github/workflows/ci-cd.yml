@@ -68,38 +68,41 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}  # 自动使用 GitHub Token
 
       - name: Test container startup
-        env:
-          DATABASE_URL: mysql+pymysql://testuser:testpass@mysql:3306/testdb
         run: |
-          echo "🚀 Starting container from: cscontrolhelper:latest"
-          
-          # 运行容器，使用服务容器的DNS名称'mysql'而非localhost
-          docker run -d \
-            --name test-app \
-            -p 8000:8000 \
-            -e DATABASE_URL=mysql+pymysql://testuser:testpass@mysql:3306/testdb \
-            cscontrolhelper:latest
-          
-          # 等待初始化
-          echo "⏳ Waiting for application to start (max 30s)..."
-          timeout=30
-          while ! curl -s http://localhost:8000/health > /dev/null 2>&1; do
-            timeout=$((timeout-1))
-            if [ $timeout -le 0 ]; then
-              echo "❌ Application failed to start within 30 seconds"
-              echo "🔍 Container logs:"
-              docker logs test-app || true
-              exit 1
-            fi
-            echo "⏳ Waiting... ($timeout seconds left)"
-            sleep 1
-          done
-          echo "✅ Health check passed!"
-          curl -v http://localhost:8000/health
-          
-          # 清理
-          docker stop test-app
-          docker rm test-app
+            echo "🚀 Starting container from: cscontrolhelper:latest"
+            
+            # 创建一个自定义网络
+            docker network create test-network
+            
+            # 连接到同一个网络并运行容器
+            docker run -d \
+              --name test-app \
+              --network test-network \
+              -p 8000:8000 \
+              -e DATABASE_URL=mysql+pymysql://testuser:testpass@mysql:3306/testdb \
+              cscontrolhelper:latest
+            
+            # 等待初始化
+            echo "⏳ Waiting for application to start (max 60s)..."
+            timeout=60
+            while ! curl -s http://localhost:8000/health > /dev/null 2>&1; do
+              timeout=$((timeout-1))
+              if [ $timeout -le 0 ]; then
+                echo "❌ Application failed to start within 60 seconds"
+                echo "🔍 Container logs:"
+                docker logs test-app || true
+                exit 1
+              fi
+              echo "⏳ Waiting... ($timeout seconds left)"
+              sleep 2
+            done
+            echo "✅ Health check passed!"
+            curl -v http://localhost:8000/health
+            
+            # 清理
+            docker stop test-app
+            docker rm test-app
+            docker network rm test-network
 
   push-to-registry:
     needs: build-and-test
