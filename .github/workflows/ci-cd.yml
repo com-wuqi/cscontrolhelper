@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}  # 自动获取 repo 名称
+  IMAGE_NAME: com-wuqi/cscontrolhelper  # 自动获取 repo 名称
 
 jobs:
   build-and-test:
@@ -56,19 +56,28 @@ jobs:
           load: true
 
       - name: Test container startup
+        env:
+          # 从metadata步骤动态获取第一个tag
+          IMAGE_TAG: ${{ steps.meta.outputs.version }}
         run: |
-          # 获取完整镜像引用 (关键修复!)
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}"
-
+          # 验证tag是否有效
+          if [ -z "$IMAGE_TAG" ]; then
+            echo "⚠️ No version tag found, using 'main' as fallback"
+            IMAGE_TAG="main"
+          fi
+            
+          # 构建完整镜像引用 (关键修复!)
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
+            
           echo "🚀 Starting container from: $IMAGE"
-
-          # 运行容器 (后台模式)
+            
+          # 运行容器
           docker run -d \
             --name test-app \
             -p 8000:8000 \
-            "$IMAGE"  # 确保有引号包裹
-
-          # 等待容器初始化
+            "$IMAGE"
+            
+          # 等待初始化
           echo "⏳ Waiting for application to start (max 30s)..."
           timeout=30
           while ! curl -s http://localhost:8000/health > /dev/null 2>&1; do
@@ -77,18 +86,18 @@ jobs:
               echo "❌ Application failed to start within 30 seconds"
               echo "🔍 Container logs:"
               docker logs test-app || true
-              echo "🔍 Container status:"
-              docker inspect test-app --format='{{.State.Status}}' || true
+              echo "🔍 Process list:"
+              docker exec test-app ps aux || true
               exit 1
             fi
             echo "⏳ Waiting... ($timeout seconds left)"
             sleep 1
           done
-
+            
           echo "✅ Health check passed!"
           curl -v http://localhost:8000/health
-
-          # 清理资源
+            
+          # 清理
           docker stop test-app
           docker rm test-app
         shell: bash
