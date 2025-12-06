@@ -12,7 +12,10 @@ use_sqlite = getenv("USE_SQLITE",default="yes")
 use_mysql = getenv("USE_MYSQL",default="yes")
 
 if use_mysql == "yes":
-    mysql_uri = getenv("DATABASE_URL","")
+    mysql_uri = getenv("DATABASE_URL", "")
+    if mysql_uri == "":
+        raise ValueError("DATABASE_URL is required when USE_MYSQL=yes")
+
     connect_args = {"charset": "utf8mb4","connect_timeout": 10}
     engine = create_engine(
         mysql_uri,
