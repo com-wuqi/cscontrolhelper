@@ -58,7 +58,7 @@ jobs:
           file: ./Dockerfile
           push: false
           tags: cscontrolhelper:latest
-          outputs: type=docker,dest=/tmp/image.tar
+          load: true
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
