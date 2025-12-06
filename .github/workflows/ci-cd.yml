@@ -71,18 +71,28 @@ jobs:
         run: |
             echo "🚀 Starting container from: cscontrolhelper:latest"
             
-            # 创建一个自定义网络
-            docker network create test-network
+            # 检查 Docker 网络
+            echo "📊 Current Docker networks:"
+            docker network ls
             
-            # 连接到同一个网络并运行容器
+            echo "🐳 Running containers:"
+            docker ps -a
+            
+            echo "🔍 MySQL service container details:"
+            docker inspect mysql || true
+            
+            # 获取 MySQL 容器的 IP 地址
+            MYSQL_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' mysql 2>/dev/null || echo "172.17.0.2")
+            echo "MySQL IP: $MYSQL_IP"
+            
+            # 运行应用容器，使用 bridge 网络，通过 IP 连接 MySQL
             docker run -d \
               --name test-app \
-              --network test-network \
+              --network bridge \
               -p 8000:8000 \
-              -e DATABASE_URL=mysql+pymysql://testuser:testpass@mysql:3306/testdb \
+              -e DATABASE_URL=mysql+pymysql://testuser:testpass@$MYSQL_IP:3306/testdb \
               cscontrolhelper:latest
             
-            # 等待初始化
             echo "⏳ Waiting for application to start (max 60s)..."
             timeout=60
             while ! curl -s http://localhost:8000/health > /dev/null 2>&1; do
@@ -97,12 +107,10 @@ jobs:
               sleep 2
             done
             echo "✅ Health check passed!"
-            curl -v http://localhost:8000/health
             
             # 清理
             docker stop test-app
             docker rm test-app
-            docker network rm test-network
 
   push-to-registry:
     needs: build-and-test
