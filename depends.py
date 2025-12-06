@@ -1,9 +1,10 @@
-from email.mime.multipart import MIMEMultipart
+import asyncio
 
 from sqlmodel import create_engine
 from .dependencies.datamodel import *
 import logging
 from os import getenv
+from typing import AsyncGenerator
 
 use_sqlite = getenv("USE_SQLITE",default="yes")
 use_mysql = getenv("USE_MYSQL",default="no")
@@ -50,4 +51,19 @@ def get_logger(name) -> logging.Logger:
     logger.addHandler(ch)
 
     return logger
+
+message_queue = asyncio.Queue()
+
+
+async def event_generator() -> AsyncGenerator[str, None]:
+    """事件生成器"""
+    while True:
+        # 等待新消息
+        message = await message_queue.get()
+        if message == "CLOSE":
+            break
+
+        # 格式化SSE消息
+        yield f"data: {json.dumps(message)}\n\n"
+        await asyncio.sleep(0.1)  # 避免过载
 

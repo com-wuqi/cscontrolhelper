@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .routers import user as user_router
 from .routers import admin as admin_router
+from .routers import sse as sse_router
 
 from .depends import create_db_and_tables
 from contextlib import asynccontextmanager
@@ -39,6 +40,7 @@ app.add_middleware(
 
 app.include_router(user_router.router)
 app.include_router(admin_router.router)
+app.include_router(sse_router.router)
 
 
 @app.get("/")

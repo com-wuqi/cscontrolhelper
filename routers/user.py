@@ -6,6 +6,7 @@ from ..crud.dbDependencies import SessionDep
 from ..crud import crudUser
 from ..depends import get_logger
 from secrets import compare_digest
+from .sse import push_message
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -65,6 +66,7 @@ async def user_player_scan(data: requestModel.ScanAndKill, session: SessionDep):
         add_info = crudUser.add_kill_info(student_id=data.student_id, killed_student_id=data.killed_student_id,session=session)
         if add_info is None:
             raise HTTPException(status_code=500, detail="Failed to change alive status")
-        # 预留sse
-        #
+        # sse
+        await push_message(f"{user.name} 击杀了 {killed_user.name}")
         return {"message": f"{user.student_id} killed {killed_user.student_id}"}
+
