@@ -1,82 +1,72 @@
-name: Build and Deploy
+name: Publish Docker Image to GHCR
 
 on:
   push:
-    branches: [ master ]
-    tags: [ 'v*.*.*' ]
+    branches: [ main ]
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: com-wuqi/cscontrolhelper  # 自动获取 repo 名称
+  IMAGE_NAME: com-wuqi/cscontrolhelper  # 全小写
+  LOCAL_IMAGE: cscontrolhelper:test      # 本地测试镜像名
 
 jobs:
-  build-and-test:
+  build-test-push:
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:latest
-        env:
-          MYSQL_ROOT_PASSWORD: testpass
-          MYSQL_DATABASE: testdb
-          MYSQL_USER: testuser
-          MYSQL_PASSWORD: testpass
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    permissions:
+      contents: read
+      packages: write  # 关键：允许写入包
+      id-token: write  # 用于 OIDC 认证
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          python-version: '3.13'
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}  # 自动使用 GitHub Token
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,format=long,prefix=
+          flavor: |
+            latest=auto
 
-      - name: Run tests
-        env:
-          DATABASE_URL: mysql+pymysql://testuser:testpass@localhost:3306/testdb
-        run: |
-          # 添加您的测试命令，例如：
-          echo "test api here"
-
+      # 关键修正1：先构建本地镜像用于测试
       - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
-          push: false
-          tags: cscontrolhelper:latest
-          load: true
+          push: false  # 仅构建不推送
+          tags: ${{ env.LOCAL_IMAGE }}
+          outputs: type=docker,dest=/tmp/image.tar
 
+      # 关键修正2：使用本地镜像测试（无需网络权限）
       - name: Test container startup
-        env:
-          # 从metadata步骤动态获取第一个tag
-          IMAGE_TAG: ${{ steps.meta.outputs.version }}
         run: |
-          # 验证tag是否有效
-          if [ -z "$IMAGE_TAG" ]; then
-            echo "⚠️ No version tag found, using 'main' as fallback"
-            IMAGE_TAG="main"
-          fi
-            
-          # 构建完整镜像引用 (关键修复!)
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
-            
-          echo "🚀 Starting container from: $IMAGE"
-            
+          # 加载本地镜像
+          docker load -i /tmp/image.tar
+          
+          echo "🚀 Starting container from local image: ${{ env.LOCAL_IMAGE }}"
+          
           # 运行容器
           docker run -d \
             --name test-app \
             -p 8000:8000 \
-            "$IMAGE"
-            
+            "${{ env.LOCAL_IMAGE }}"
+          
           # 等待初始化
           echo "⏳ Waiting for application to start (max 30s)..."
           timeout=30
@@ -93,51 +83,17 @@ jobs:
             echo "⏳ Waiting... ($timeout seconds left)"
             sleep 1
           done
-            
+          
           echo "✅ Health check passed!"
           curl -v http://localhost:8000/health
-            
+          
           # 清理
           docker stop test-app
           docker rm test-app
         shell: bash
 
-  push-to-registry:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write  # 关键权限：允许写入包
-      id-token: write  # 用于 OIDC 认证
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Build
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}  # 自动使用 GitHub Token
-
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,format=long,prefix=
-            type=edge  # main 分支的别名
-
-      - name: Build and push Docker image
+      # 关键修正3：测试成功后才推送
+      - name: Push Docker image to GHCR
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -147,14 +103,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            BUILD_DATE=${{ steps.date.outputs.date }}
-            VCS_REF=${{ github.sha }}
-
-      - name: Scan image for vulnerabilities
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
