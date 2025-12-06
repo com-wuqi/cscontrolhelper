@@ -1,5 +1,6 @@
 from .dbDependencies import SessionDep
 from ..dependencies.datamodel import *
+from ..dependencies.secureHelper import *
 from ..depends import get_logger
 from sqlmodel import select
 from datetime import datetime,timezone
@@ -25,9 +26,10 @@ def create_user(users:User,session: SessionDep) -> int:
 
 
 
-def add_secret_key_by_id(user_id:int,session: SessionDep):
-    user = session.get(User,user_id)
-    user.secret_key = ""
+def add_secret_key_by_id(student_id:int,session: SessionDep):
+    statement = select(User).where(User.student_id == student_id)
+    user = session.exec(statement).first()
+    user.secret_key = generate_secret_key()
     session.add(user)
     try:
         session.commit()
@@ -39,5 +41,8 @@ def add_secret_key_by_id(user_id:int,session: SessionDep):
         logger.warning(f"user: {user.student_id} could not add secret key")
         return False
 
-
+def get_user_by_student_id(student_id:int,session: SessionDep):
+    statement = select(User).where(User.student_id == student_id)
+    user = session.exec(statement).first()
+    return user
 

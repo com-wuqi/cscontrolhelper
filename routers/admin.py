@@ -3,7 +3,7 @@ from ..dependencies import requestModel, secureHelper
 from ..dependencies.datamodel import *
 from ..dependencies.responseModel import *
 from ..crud.dbDependencies import SessionDep
-from ..crud import crudUser
+from ..crud import crudAdmin
 from ..depends import get_logger
 from secrets import compare_digest
 
@@ -11,38 +11,35 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 
-@router.post("/api/player/login", response_model=ResponseUser)
-async def user_login(data: requestModel.UserLogin, session: SessionDep):
-    user = crudUser.get_user_by_student_id(student_id=data.student_id, session=session)
+@router.post("/api/admin/login",response_model=ResponseAdmin)
+async def user_login(data: requestModel.AdminLogin, session: SessionDep):
+    user = crudAdmin.get_user_by_username(username=data.user, session=session)
     if user is None:
         raise HTTPException(status_code=404, detail="User does not exist")
     input_passwd = secureHelper.hash_salted_password(data.password)
     if compare_digest(input_passwd, user.password):
-        crudUser.add_secret_key_by_id(student_id=data.student_id, session=session)
+        crudAdmin.add_secret_key_by_id(admin_id=user.id, session=session)
         return user
     else:
         raise HTTPException(status_code=403, detail="Incorrect Password")
 
 
 
-@router.post("/api/player/register")
-async def user_register(data: requestModel.UserRegister, session: SessionDep):
+@router.post("/api/admin/register")
+async def user_register(data: requestModel.AdminRegister, session: SessionDep):
     user_password = data.password
-    user_name = data.name
+    user_name = data.user
     user_secret_key = secureHelper.generate_secret_key()
-    hashed_password = secureHelper.hash_salted_password(user_password,)
-    user = User(
-        name=user_name,
+    hashed_password = secureHelper.hash_salted_password(user_password)
+    user = Admin(
+        user=user_name,
         password=hashed_password,
-        student_id=data.student_id,
         secret_key=user_secret_key,
-        kill=[]
     )
 
-    states = crudUser.create_user(user, session)
+    states = crudAdmin.create_user(user, session)
     if states == 0:
         return {"message": "User created successfully"}
     else:
         raise HTTPException(status_code=400, detail="user already exists!")
-
 

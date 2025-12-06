@@ -4,7 +4,7 @@ from typing import List
 请求体模型
 """
 class UserLogin(BaseModel):
-    email: str
+    student_id: int
     password: str
 
 class UserRegister(BaseModel):
@@ -17,3 +17,10 @@ class UserLogout(BaseModel):
     email: str
     password: str
 
+class AdminLogin(BaseModel):
+    user: str
+    password: str
+
+class AdminRegister(BaseModel):
+    user: str
+    password: str

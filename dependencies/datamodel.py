@@ -34,7 +34,7 @@ class User(SQLModel,table=True):
         default=[],
         sa_column=Column(ListOfIntegers)
     )  # 击杀统计,内容为 student_id
-    team: str = Field(index=True,nullable=True)  # 队伍,由后端分配 ("red","blue")
+    team: str = Field(index=True,nullable=False,default="")  # 队伍,由后端分配 ("red","blue")
 
 
 class Admin(SQLModel, table=True):
