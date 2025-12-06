@@ -73,11 +73,8 @@ jobs:
           IMAGE_TAG: ${{ steps.meta.outputs.version }}
           DATABASE_URL: mysql+pymysql://testuser:testpass@mysql:3306/testdb
         run: |
-          # 加载之前构建的镜像
-          docker load --input /tmp/image.tar
-          
           # 直接使用镜像ID或标签运行容器
-          IMAGE_ID=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep cscontrolhelper:latest)
+          IMAGE_ID=docker.io/library/cscontrolhelper:latest
           
           echo "🚀 Starting container from: $IMAGE_ID"
           
