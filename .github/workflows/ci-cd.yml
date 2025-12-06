@@ -55,7 +55,7 @@ jobs:
           tags: cscontrolhelper:latest
           load: true
 
-      - name: Test container startup (关键修复!)
+      - name: Test container startup
         run: |
           # 运行容器 (后台模式)
           docker run -d \
