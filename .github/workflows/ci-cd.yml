@@ -71,26 +71,12 @@ jobs:
         run: |
             echo "🚀 Starting container from: cscontrolhelper:latest"
             
-            # 检查 Docker 网络
-            echo "📊 Current Docker networks:"
-            docker network ls
-            
-            echo "🐳 Running containers:"
-            docker ps -a
-            
-            echo "🔍 MySQL service container details:"
-            docker inspect mysql || true
-            
-            # 获取 MySQL 容器的 IP 地址
-            MYSQL_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' mysql 2>/dev/null || echo "172.17.0.2")
-            echo "MySQL IP: $MYSQL_IP"
-            
-            # 运行应用容器，使用 bridge 网络，通过 IP 连接 MySQL
+            # 在 GitHub Actions 环境中，可以使用 host.docker.internal 访问宿主机服务
             docker run -d \
               --name test-app \
-              --network bridge \
+              --add-host=host.docker.internal:host-gateway \
               -p 8000:8000 \
-              -e DATABASE_URL=mysql+pymysql://testuser:testpass@$MYSQL_IP:3306/testdb \
+              -e DATABASE_URL='mysql+pymysql://testuser:testpass@host.docker.internal:3306/testdb' \
               cscontrolhelper:latest
             
             echo "⏳ Waiting for application to start (max 60s)..."
@@ -107,6 +93,7 @@ jobs:
               sleep 2
             done
             echo "✅ Health check passed!"
+            curl -v http://localhost:8000/health
             
             # 清理
             docker stop test-app
