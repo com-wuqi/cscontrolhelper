@@ -3,7 +3,7 @@ from ..dependencies import requestModel, secureHelper
 from ..dependencies.datamodel import *
 from ..dependencies.responseModel import *
 from ..crud.dbDependencies import SessionDep
-from ..crud import crudAdmin
+from ..crud import crudAdmin,crudUser
 from ..depends import get_logger
 from secrets import compare_digest
 from .sse import push_message
@@ -54,3 +54,14 @@ async def sse_send(data: requestModel.AdminPushMessage, session: SessionDep):
     await push_message(message=data.message)
     return {"message": "message sent successfully"}
 
+@router.post("/api/admin/resurrect")
+async def resurrect(data: requestModel.AdminResurrect, session: SessionDep):
+    admin = crudAdmin.get_user_by_id(data.id, session=session)
+    if admin is None:
+        raise HTTPException(status_code=404, detail="User does not exist")
+    if not compare_digest(data.secret_key, admin.secret_key):
+        raise HTTPException(status_code=403, detail="Incorrect secret key")
+    states = crudUser.change_user_alive_by_id(student_id=data.student_id,alive=True,session=session)
+    if states is None:
+        raise HTTPException(status_code=500, detail="could not change user statues")
+    return {"message": "message resurrected successfully"}

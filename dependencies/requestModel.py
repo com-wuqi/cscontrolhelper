@@ -34,3 +34,8 @@ class AdminPushMessage(BaseModel):
     id: int
     secret_key: str
     message: str
+
+class AdminResurrect(BaseModel):
+    id: int
+    secret_key: str
+    student_id: int
