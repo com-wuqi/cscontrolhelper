@@ -55,16 +55,35 @@ jobs:
           tags: cscontrolhelper:latest
           load: true
 
-      - name: Test Docker container
+      - name: Test container startup (关键修复!)
         run: |
+          # 运行容器 (后台模式)
           docker run -d \
             --name test-app \
-            -e DATABASE_URL=mysql+pymysql://testuser:testpass@host.docker.internal:3306/testdb \
             -p 8000:8000 \
-            cscontrolhelper:latest
-          
-          sleep 30  # 等待应用启动
-          curl http://localhost:8000/health || exit 1
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+            
+          # 等待容器初始化 (最多 30 秒)
+          echo "Waiting for application to start..."
+          timeout=30
+          while ! curl -s http://localhost:8000/health > /dev/null; do
+            timeout=$((timeout-1))
+            if [ $timeout -le 0 ]; then
+              echo "❌ Application failed to start within 30 seconds"
+              docker logs test-app
+              exit 1
+            fi
+            echo "⏳ Waiting... ($timeout seconds left)"
+            sleep 1
+          done
+            
+          echo "✅ Application started successfully!"
+          curl http://localhost:8000/health
+            
+          # 清理
+          docker stop test-app
+          docker rm test-app
+        shell: bash
 
   push-to-registry:
     needs: build-and-test

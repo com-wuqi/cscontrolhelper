@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 FROM python:3.13-slim
 
-RUN apt-get update && apt-get install -y wait-for-it curl ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 RUN adduser --disabled-password --gecos "" appuser && \
     mkdir -p /home/appuser/.local && \
@@ -33,4 +33,4 @@ HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=15s \
 
 EXPOSE 8000
 
-CMD ["sh", "-c","wait-for-it.sh", "host.docker.internal:3306", "--","fastapi", "run", "main.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["fastapi", "run", "main.py", "--host", "0.0.0.0", "--port", "8000"]
