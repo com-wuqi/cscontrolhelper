@@ -46,7 +46,7 @@ jobs:
 
       - name: Run tests
         env:
-          DATABASE_URL: mysql+pymysql://testuser:testpass@localhost:3306/testdb
+          DATABASE_URL: mysql+pymysql://testuser:testpass@mysql:3306/testdb
         run: |
           # 添加您的测试命令，例如：
           echo "test api here"
@@ -71,7 +71,7 @@ jobs:
         env:
           # 从metadata步骤动态获取第一个tag
           IMAGE_TAG: ${{ steps.meta.outputs.version }}
-          DATABASE_URL: mysql+pymysql://testuser:testpass@localhost:3306/testdb
+          DATABASE_URL: mysql+pymysql://testuser:testpass@mysql:3306/testdb
         run: |
           # 验证tag是否有效
           if [ -z "$IMAGE_TAG" ]; then
@@ -87,8 +87,9 @@ jobs:
           # 运行容器
           docker run -d \
             --name test-app \
+            --network github_network \
             -p 8000:8000 \
-            -e DATABASE_URL=mysql+pymysql://testuser:testpass@localhost:3306/testdb \
+            -e DATABASE_URL=mysql+pymysql://testuser:testpass@mysql:3306/testdb \
             "$IMAGE"
             
           # 等待初始化
