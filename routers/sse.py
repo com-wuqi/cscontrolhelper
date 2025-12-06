@@ -2,6 +2,7 @@ from fastapi import APIRouter,Request
 import asyncio
 from ..depends import get_logger,event_generator,message_queue
 from fastapi.responses import StreamingResponse
+from time import time
 
 
 router = APIRouter()
@@ -36,6 +37,7 @@ async def sse_endpoint(request: Request):
 async def push_message(message: str):
     """推送消息到所有连接的客户端"""
     await message_queue.put({
+        "timestamp": time(),
         "message": message,
     })
     return {"status": "message queued"}

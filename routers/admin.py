@@ -6,6 +6,7 @@ from ..crud.dbDependencies import SessionDep
 from ..crud import crudAdmin
 from ..depends import get_logger
 from secrets import compare_digest
+from .sse import push_message
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -42,4 +43,14 @@ async def user_register(data: requestModel.AdminRegister, session: SessionDep):
         return {"message": "User created successfully"}
     else:
         raise HTTPException(status_code=400, detail="user already exists!")
+
+@router.post("/api/admin/sseSend")
+async def sse_send(data: requestModel.AdminPushMessage, session: SessionDep):
+    admin = crudAdmin.get_user_by_id(data.id,session=session)
+    if admin is None:
+        raise HTTPException(status_code=404, detail="User does not exist")
+    if not compare_digest(data.secret_key, admin.secret_key):
+        raise HTTPException(status_code=403, detail="Incorrect secret key")
+    await push_message(message=data.message)
+    return {"message": "message sent successfully"}
 

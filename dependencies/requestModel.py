@@ -29,3 +29,8 @@ class ScanAndKill(BaseModel):
     student_id: int
     secret_key: str
     killed_student_id: int
+
+class AdminPushMessage(BaseModel):
+    id: int
+    secret_key: str
+    message: str
