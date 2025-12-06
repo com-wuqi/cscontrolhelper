@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y wait-for-it curl && rm -rf /var/lib/apt
 
 RUN adduser --disabled-password --gecos "" appuser && \
     mkdir -p /home/appuser/.local && \
-    chown -R appuser:appuser /home/appuser \
+    chown -R appuser:appuser /home/appuser
 
 USER appuser
 WORKDIR /apps
