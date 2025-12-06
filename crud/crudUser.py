@@ -3,7 +3,6 @@ from ..dependencies.datamodel import *
 from ..dependencies.secureHelper import *
 from ..depends import get_logger
 from sqlmodel import select,update
-from ast import literal_eval
 
 from datetime import datetime,timezone
 import sqlalchemy.exc
@@ -70,7 +69,7 @@ def add_kill_info(student_id: int, killed_student_id: int, session: SessionDep):
         statement = select(User).where(User.student_id == student_id).with_for_update()
         user = session.exec(statement).one()  # 确保用户存在，否则抛出异常
 
-        user.kill = literal_eval(str(user.kill))
+        # user.kill = literal_eval(str(user.kill))
 
         if killed_student_id in user.kill:
             logger.info(f"Kill record for {killed_student_id} already exists for user {student_id}")
@@ -80,7 +79,6 @@ def add_kill_info(student_id: int, killed_student_id: int, session: SessionDep):
         new_kill_list = user.kill.copy()  # 创建新列表避免引用问题
         new_kill_list.append(killed_student_id)
 
-        # 4. 直接更新数据库字段 (原子操作)
         update_stmt = (
             update(User)
             .where(User.student_id == student_id)
@@ -88,8 +86,6 @@ def add_kill_info(student_id: int, killed_student_id: int, session: SessionDep):
             .execution_options(synchronize_session="fetch")
         )
         session.exec(update_stmt)
-
-
         session.commit()
         session.refresh(user)
 

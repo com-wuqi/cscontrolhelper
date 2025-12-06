@@ -1,5 +1,5 @@
 from typing import List
-from datetime import datetime,timezone
+from ast import literal_eval
 
 import json
 from sqlmodel import Field, SQLModel,Relationship,JSON,Column,VARCHAR,TypeDecorator
@@ -15,13 +15,13 @@ class ListOfIntegers(TypeDecorator):
 
     def process_bind_param(self, value, dialect):
         if value is not None:
-            return json.dumps(value)
-        return value
+            return str(value)
+        return "[]"
 
     def process_result_value(self, value, dialect):
         if value is not None:
-            return json.loads(value)
-        return value
+            return literal_eval(value)
+        return []
 
 class User(SQLModel,table=True):
     __tablename__ = "user"
@@ -32,8 +32,9 @@ class User(SQLModel,table=True):
     secret_key: str = Field(index=False,nullable=True)  # 登录凭证,由后端生成
     password: str = Field(index=False, nullable=False)  # str
     kill: List[int] = Field(
-        default=[],
-        sa_column=Column(ListOfIntegers)
+        default_factory=list,
+        sa_type=ListOfIntegers,
+        nullable=False  # 显式声明非空
     )  # 击杀统计,内容为 student_id
     team: str = Field(index=True,nullable=False,default="")  # 队伍,由后端分配 ("red","blue")
 
