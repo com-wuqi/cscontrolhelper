@@ -1,11 +1,11 @@
+import sqlalchemy.exc
+from sqlmodel import select, update
+
 from .dbDependencies import SessionDep
 from ..dependencies.datamodel import *
 from ..dependencies.secureHelper import *
 from ..depends import get_logger
-from sqlmodel import select,update
 
-from datetime import datetime,timezone
-import sqlalchemy.exc
 logger = get_logger(__name__)
 """
 数据库操作
@@ -82,7 +82,7 @@ def add_kill_info(student_id: int, killed_student_id: int, session: SessionDep):
         update_stmt = (
             update(User)
             .where(User.student_id == student_id)
-            .values(kill=json.dumps(new_kill_list))
+            .values(kill=str(new_kill_list))
             .execution_options(synchronize_session="fetch")
         )
         session.exec(update_stmt)

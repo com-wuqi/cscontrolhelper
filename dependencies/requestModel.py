@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+
 """
 请求体模型
 """
@@ -38,4 +38,7 @@ class AdminPushMessage(BaseModel):
 class AdminResurrect(BaseModel):
     id: int
     secret_key: str
+    student_id: int
+
+class GetNameByStudentId(BaseModel):
     student_id: int

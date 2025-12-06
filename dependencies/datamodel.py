@@ -1,8 +1,7 @@
-from typing import List
 from ast import literal_eval
+from typing import List
 
-import json
-from sqlmodel import Field, SQLModel,Relationship,JSON,Column,VARCHAR,TypeDecorator
+from sqlmodel import Field, SQLModel, VARCHAR, TypeDecorator
 
 """
 数据库模型
