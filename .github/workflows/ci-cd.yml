@@ -73,25 +73,21 @@ jobs:
           IMAGE_TAG: ${{ steps.meta.outputs.version }}
           DATABASE_URL: mysql+pymysql://testuser:testpass@mysql:3306/testdb
         run: |
-          # 验证tag是否有效
-          if [ -z "$IMAGE_TAG" ]; then
-            echo "⚠️ No version tag found, using 'main' as fallback"
-            IMAGE_TAG="main"
-          fi
-            
-          # 构建完整镜像引用 (关键修复!)
-          IMAGE="docker.io/library/cscontrolhelper:latest"
-            
-          echo "🚀 Starting container from: $IMAGE"
-            
-          # 运行容器
+          # 加载之前构建的镜像
+          docker load --input /tmp/image.tar
+          
+          # 直接使用镜像ID或标签运行容器
+          IMAGE_ID=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep cscontrolhelper:latest)
+          
+          echo "🚀 Starting container from: $IMAGE_ID"
+          
+          # 运行容器，使用服务容器的DNS名称'mysql'而非localhost
           docker run -d \
             --name test-app \
-            --network github_network \
-            -p 8000:8000 \
+            --network host \  # 使用host网络模式直接访问服务
             -e DATABASE_URL=mysql+pymysql://testuser:testpass@mysql:3306/testdb \
-            "$IMAGE"
-            
+            $IMAGE_ID
+          
           # 等待初始化
           echo "⏳ Waiting for application to start (max 30s)..."
           timeout=30
@@ -101,21 +97,18 @@ jobs:
               echo "❌ Application failed to start within 30 seconds"
               echo "🔍 Container logs:"
               docker logs test-app || true
-              echo "🔍 Process list:"
-              docker exec test-app ps aux || true
               exit 1
             fi
             echo "⏳ Waiting... ($timeout seconds left)"
             sleep 1
           done
-            
           echo "✅ Health check passed!"
           curl -v http://localhost:8000/health
-            
+          
           # 清理
           docker stop test-app
           docker rm test-app
-        shell: bash
+          shell: bash
 
   push-to-registry:
     needs: build-and-test
