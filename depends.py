@@ -51,6 +51,3 @@ def get_logger(name) -> logging.Logger:
 
     return logger
 
-def send_email(to,subject,content):
-    # 发送一封邮件
-    pass

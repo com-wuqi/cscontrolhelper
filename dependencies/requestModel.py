@@ -8,10 +8,10 @@ class UserLogin(BaseModel):
     password: str
 
 class UserRegister(BaseModel):
-    email: str
     name: str
     password: str
-    password_salt: str
+    student_id: int
+
 
 class UserLogout(BaseModel):
     email: str

@@ -28,3 +28,4 @@ user: str: = Field(index=True, nullable=False)
 password: str = Field(index=False,nullable=False)
 
 secret_key: str = Field(index=False) # 登录凭证,由后端生成
+
