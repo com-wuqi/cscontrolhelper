@@ -80,7 +80,7 @@ jobs:
           fi
             
           # 构建完整镜像引用 (关键修复!)
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
+          IMAGE="docker.io/library/cscontrolhelper:latest"
             
           echo "🚀 Starting container from: $IMAGE"
             
