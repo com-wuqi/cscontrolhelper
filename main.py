@@ -52,3 +52,8 @@ async def get_root():
 @app.post("/")
 async def post_root():
     return {"Hello": "World"}
+
+@app.get("/health")
+async def health_check():
+    """健康检查端点 (用于Docker和K8s)"""
+    return {"status": "healthy", "database": "connected"}

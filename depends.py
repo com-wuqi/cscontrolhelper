@@ -9,10 +9,10 @@ from sqlmodel import create_engine
 from .dependencies.datamodel import *
 
 use_sqlite = getenv("USE_SQLITE",default="yes")
-use_mysql = getenv("USE_MYSQL",default="no")
+use_mysql = getenv("USE_MYSQL",default="yes")
 
 if use_mysql == "yes":
-    mysql_uri = getenv("MYSQL_DATABASE_URL","")
+    mysql_uri = getenv("DATABASE_URL","")
     connect_args = {"charset": "utf8mb4","connect_timeout": 10}
     engine = create_engine(
         mysql_uri,
