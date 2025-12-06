@@ -57,30 +57,38 @@ jobs:
 
       - name: Test container startup
         run: |
+          # 获取完整镜像引用 (关键修复!)
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}"
+
+          echo "🚀 Starting container from: $IMAGE"
+
           # 运行容器 (后台模式)
           docker run -d \
             --name test-app \
             -p 8000:8000 \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
-            
-          # 等待容器初始化 (最多 30 秒)
-          echo "Waiting for application to start..."
+            "$IMAGE"  # 确保有引号包裹
+
+          # 等待容器初始化
+          echo "⏳ Waiting for application to start (max 30s)..."
           timeout=30
-          while ! curl -s http://localhost:8000/health > /dev/null; do
+          while ! curl -s http://localhost:8000/health > /dev/null 2>&1; do
             timeout=$((timeout-1))
             if [ $timeout -le 0 ]; then
               echo "❌ Application failed to start within 30 seconds"
-              docker logs test-app
+              echo "🔍 Container logs:"
+              docker logs test-app || true
+              echo "🔍 Container status:"
+              docker inspect test-app --format='{{.State.Status}}' || true
               exit 1
             fi
             echo "⏳ Waiting... ($timeout seconds left)"
             sleep 1
           done
-            
-          echo "✅ Application started successfully!"
-          curl http://localhost:8000/health
-            
-          # 清理
+
+          echo "✅ Health check passed!"
+          curl -v http://localhost:8000/health
+
+          # 清理资源
           docker stop test-app
           docker rm test-app
         shell: bash
