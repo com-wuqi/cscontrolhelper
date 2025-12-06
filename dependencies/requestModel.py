@@ -24,3 +24,8 @@ class AdminLogin(BaseModel):
 class AdminRegister(BaseModel):
     user: str
     password: str
+
+class ScanAndKill(BaseModel):
+    student_id: int
+    secret_key: str
+    killed_student_id: int

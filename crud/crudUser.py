@@ -46,3 +46,32 @@ def get_user_by_student_id(student_id:int,session: SessionDep):
     user = session.exec(statement).first()
     return user
 
+def change_user_alive_by_id(student_id:int,alive:bool,session: SessionDep):
+    statement = select(User).where(User.student_id == student_id)
+    user = session.exec(statement).first()
+    user.is_alive = alive
+    session.add(user)
+    try:
+        session.commit()
+        logger.info(f"user: {user.student_id} changed statues")
+        session.refresh(user)
+        return user.is_alive
+    except sqlalchemy.exc.IntegrityError:
+        session.rollback()
+        logger.warning(f"user: {user.student_id} could not change statues")
+        return None
+
+def add_kill_info(student_id:int,killed_student_id:int,session: SessionDep):
+    statement = select(User).where(User.student_id == student_id)
+    user = session.exec(statement).first()
+    user.kill.append(killed_student_id)
+    session.add(user)
+    try:
+        session.commit()
+        logger.info(f"user: {user.student_id} added kill info")
+        session.refresh(user)
+        return user.kill
+    except sqlalchemy.exc.IntegrityError:
+        session.rollback()
+        logger.warning(f"user: {user.student_id} could not add kill info")
+        return None

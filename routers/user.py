@@ -46,3 +46,25 @@ async def user_register(data: requestModel.UserRegister, session: SessionDep):
         raise HTTPException(status_code=400, detail="user already exists!")
 
 
+@router.post("/api/player/scan")
+async def user_player_scan(data: requestModel.ScanAndKill, session: SessionDep):
+    user = crudUser.get_user_by_student_id(student_id=data.student_id, session=session)
+    if not user.is_alive:
+        raise HTTPException(status_code=403, detail="User was killed")
+    if not compare_digest(user.secret_key, data.secret_key):
+        raise HTTPException(status_code=403, detail="Incorrect secret_key")
+    killed_user = crudUser.get_user_by_student_id(student_id=data.killed_student_id, session=session)
+    if killed_user is None:
+        raise HTTPException(status_code=404, detail="killedUser does not exist")
+    if compare_digest(user.team, killed_user.team):
+        raise HTTPException(status_code=403, detail="could not kill the same group members")
+    states = crudUser.change_user_alive_by_id(student_id=data.killed_student_id,alive=False,session=session)
+    if states is None:
+        raise HTTPException(status_code=403, detail="Failed to change alive status")
+    else:
+        add_info = crudUser.add_kill_info(student_id=data.student_id, killed_student_id=data.killed_student_id,session=session)
+        if add_info is None:
+            raise HTTPException(status_code=500, detail="Failed to change alive status")
+        # 预留sse
+        #
+        return {"message": f"{user.student_id} killed {killed_user.student_id}"}

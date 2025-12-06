@@ -9,6 +9,7 @@ class ResponseUser(BaseModel):
     name:str
     secret_key:str
     team: str
+    is_alive: bool
 
 class ResponseAdmin(BaseModel):
     id:int
