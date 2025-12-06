@@ -11,6 +11,7 @@ from sqlmodel import Field, SQLModel,Relationship,JSON,Column,VARCHAR,TypeDecora
 
 class ListOfIntegers(TypeDecorator):
     impl = VARCHAR
+    cache_ok = True
 
     def process_bind_param(self, value, dialect):
         if value is not None:

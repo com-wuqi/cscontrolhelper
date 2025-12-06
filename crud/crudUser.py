@@ -2,7 +2,9 @@ from .dbDependencies import SessionDep
 from ..dependencies.datamodel import *
 from ..dependencies.secureHelper import *
 from ..depends import get_logger
-from sqlmodel import select
+from sqlmodel import select,update
+from ast import literal_eval
+
 from datetime import datetime,timezone
 import sqlalchemy.exc
 logger = get_logger(__name__)
@@ -61,17 +63,39 @@ def change_user_alive_by_id(student_id:int,alive:bool,session: SessionDep):
         logger.warning(f"user: {user.student_id} could not change statues")
         return None
 
-def add_kill_info(student_id:int,killed_student_id:int,session: SessionDep):
-    statement = select(User).where(User.student_id == student_id)
-    user = session.exec(statement).first()
-    user.kill.append(killed_student_id)
-    session.add(user)
+
+def add_kill_info(student_id: int, killed_student_id: int, session: SessionDep):
     try:
+
+        statement = select(User).where(User.student_id == student_id).with_for_update()
+        user = session.exec(statement).one()  # 确保用户存在，否则抛出异常
+
+        user.kill = literal_eval(str(user.kill))
+
+        if killed_student_id in user.kill:
+            logger.info(f"Kill record for {killed_student_id} already exists for user {student_id}")
+            return user.kill
+
+
+        new_kill_list = user.kill.copy()  # 创建新列表避免引用问题
+        new_kill_list.append(killed_student_id)
+
+        # 4. 直接更新数据库字段 (原子操作)
+        update_stmt = (
+            update(User)
+            .where(User.student_id == student_id)
+            .values(kill=json.dumps(new_kill_list))
+            .execution_options(synchronize_session="fetch")
+        )
+        session.exec(update_stmt)
+
+
         session.commit()
-        logger.info(f"user: {user.student_id} added kill info")
         session.refresh(user)
+
+        logger.info(f"User {student_id} added kill: {killed_student_id}. New kills: {user.kill}")
         return user.kill
-    except sqlalchemy.exc.IntegrityError:
+    except Exception as e:
+        logger.exception(f"Unexpected error updating kills for user {student_id}: {str(e)}")
         session.rollback()
-        logger.warning(f"user: {user.student_id} could not add kill info")
         return None
