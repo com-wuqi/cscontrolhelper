@@ -69,21 +69,16 @@ jobs:
 
       - name: Test container startup
         env:
-          # 从metadata步骤动态获取第一个tag
-          IMAGE_TAG: ${{ steps.meta.outputs.version }}
           DATABASE_URL: mysql+pymysql://testuser:testpass@mysql:3306/testdb
         run: |
-          # 直接使用镜像ID或标签运行容器
-          IMAGE_ID=docker.io/library/cscontrolhelper:latest
-          
-          echo "🚀 Starting container from: $IMAGE_ID"
+          echo "🚀 Starting container from: cscontrolhelper:latest"
           
           # 运行容器，使用服务容器的DNS名称'mysql'而非localhost
           docker run -d \
             --name test-app \
-            --network host \  # 使用host网络模式直接访问服务
+            -p 8000:8000 \
             -e DATABASE_URL=mysql+pymysql://testuser:testpass@mysql:3306/testdb \
-            $IMAGE_ID
+            cscontrolhelper:latest
           
           # 等待初始化
           echo "⏳ Waiting for application to start (max 30s)..."
@@ -105,7 +100,6 @@ jobs:
           # 清理
           docker stop test-app
           docker rm test-app
-          shell: bash
 
   push-to-registry:
     needs: build-and-test
