@@ -10,18 +10,9 @@ from .dependencies.datamodel import *
 
 use_sqlite = getenv("USE_SQLITE",default="yes")
 use_mysql = getenv("USE_MYSQL",default="no")
-if use_sqlite == "yes":
-    sqlite_uri = getenv("SQLALCHEMY_DATABASE_URI",default="sqlite:///sqlite0.db")
-    connect_args = {"check_same_thread": False}
-    engine = create_engine(sqlite_uri, connect_args=connect_args)
 
-elif use_mysql == "yes":
-    mysql_user = getenv("MYSQL_USER", "root")
-    mysql_password = getenv("MYSQL_PASSWORD", "default")
-    mysql_host = getenv("MYSQL_HOST", "localhost")
-    mysql_port = getenv("MYSQL_PORT", "3306")
-    mysql_database = getenv("MYSQL_DATABASE", "FastAuthService")
-    mysql_uri = f"mysql+pymysql://{mysql_user}:{mysql_password}@{mysql_host}:{mysql_port}/{mysql_database}"
+if use_mysql == "yes":
+    mysql_uri = getenv("MYSQL_DATABASE_URL","")
     connect_args = {"charset": "utf8mb4","connect_timeout": 10}
     engine = create_engine(
         mysql_uri,
@@ -32,6 +23,10 @@ elif use_mysql == "yes":
         pool_size=10,  # 连接池大小
         max_overflow=15,  # 最大溢出连接数
     )
+elif use_sqlite == "yes":
+    sqlite_uri = getenv("SQLALCHEMY_DATABASE_URI",default="sqlite:///sqlite0.db")
+    connect_args = {"check_same_thread": False}
+    engine = create_engine(sqlite_uri, connect_args=connect_args)
 else:
     raise ValueError("Unsupported SQLAlchemy engine type")
 

@@ -1,0 +1,12 @@
+# 忽略不需要的文件
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.git
+.idea
+.vscode
+sqlite.db
+venv
+*.md

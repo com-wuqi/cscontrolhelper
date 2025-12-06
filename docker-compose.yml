@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # FastAPI 服务
+  web:
+    build:
+      context: .  # 构建上下文为当前目录
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"  # 主机:容器 端口映射
+    environment:
+      - DATABASE_URL=mysql+pymysql://user:password@db:3306/mydb
+    depends_on:
+      - db  # 等待 db 服务启动
+
+
+  # MySQL 服务
+  db:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: mydb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"  # 仅开发时需要，生产环境移除此行
+    volumes:
+      - mysql-data:/var/lib/mysql  # 持久化数据
+
+# 声明卷
+volumes:
+  mysql-data:  # 数据持久化到 Docker 卷
