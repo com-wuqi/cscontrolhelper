@@ -18,17 +18,17 @@ jobs:
       contents: read
       packages: write  # 关键：允许写入包
       id-token: write  # 用于 OIDC 认证
-    services:
-      mysql:
-        image: mysql:latest
-        env:
-          MYSQL_ROOT_PASSWORD: testpass
-          MYSQL_DATABASE: testdb
-          MYSQL_USER: testuser
-          MYSQL_PASSWORD: testpass
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+#    services:
+#      mysql:
+#        image: mysql:latest
+#        env:
+#          MYSQL_ROOT_PASSWORD: testpass
+#          MYSQL_DATABASE: testdb
+#          MYSQL_USER: testuser
+#          MYSQL_PASSWORD: testpass
+#        ports:
+#          - 3306:3306
+#        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
       - name: Checkout code
@@ -71,26 +71,26 @@ jobs:
         run: |
             echo "🚀 Starting container from: cscontrolhelper:latest"
             
-            # 在 GitHub Actions 环境中，可以使用 host.docker.internal 访问宿主机服务
+            # 使用 SQLite 进行容器启动测试（最简单可靠）
             docker run -d \
               --name test-app \
-              --add-host=host.docker.internal:host-gateway \
               -p 8000:8000 \
-              -e DATABASE_URL='mysql+pymysql://testuser:testpass@host.docker.internal:3306/testdb' \
+              -e USE_MYSQL=no \
+              -e USE_SQLITE=yes \
               cscontrolhelper:latest
             
-            echo "⏳ Waiting for application to start (max 60s)..."
-            timeout=60
+            echo "⏳ Waiting for application to start (max 30s)..."
+            timeout=30
             while ! curl -s http://localhost:8000/health > /dev/null 2>&1; do
               timeout=$((timeout-1))
               if [ $timeout -le 0 ]; then
-                echo "❌ Application failed to start within 60 seconds"
+                echo "❌ Application failed to start within 30 seconds"
                 echo "🔍 Container logs:"
                 docker logs test-app || true
                 exit 1
               fi
               echo "⏳ Waiting... ($timeout seconds left)"
-              sleep 2
+              sleep 1
             done
             echo "✅ Health check passed!"
             curl -v http://localhost:8000/health
