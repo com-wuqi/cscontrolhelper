@@ -9,7 +9,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: com-wuqi/cscontrolhelper
-  LOCAL_IMAGE: cscontrolhelper:test      # 本地测试镜像名
+  LOCAL_IMAGE: cscontrolhelper:test
 
 jobs:
   build-and-test:
