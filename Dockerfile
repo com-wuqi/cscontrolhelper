@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 FROM python:3.13-slim
 
-RUN apt-get update && apt-get install -y curl ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get install -y curl ca-certificates
 
 RUN adduser --disabled-password --gecos "" appuser && \
     mkdir -p /home/appuser/.local && \
