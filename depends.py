@@ -1,8 +1,7 @@
-import asyncio
-import json
 import logging
+from asyncio import Queue, Lock
+from collections import deque
 from os import getenv
-from typing import AsyncGenerator
 
 from sqlmodel import create_engine
 
@@ -52,18 +51,55 @@ def get_logger(name) -> logging.Logger:
 
     return logger
 
-message_queue = asyncio.Queue()
+logger = get_logger(__name__)
+
+class SSEManager:
+    def __init__(self):
+        self.subscribers = deque()  # 存储所有客户端队列
+        self.lock = Lock()  # 保护订阅者列表的锁
+        self._counter = 0  # 用于生成唯一客户端ID
+
+    async def subscribe(self) -> tuple[Queue, int]:
+        """注册新订阅者，返回专属队列"""
+        client_id = self._counter
+        self._counter += 1
+        queue = Queue(maxsize=100)  # 限制队列大小防内存溢出
+
+        async with self.lock:
+            self.subscribers.append((client_id, queue))
+            logger.info(f"新订阅者加入 (ID:{client_id}), 当前在线: {len(self.subscribers)}")
+        return queue, client_id
+
+    async def unsubscribe(self, client_id: int):
+        """移除订阅者"""
+        async with self.lock:
+            # 通过ID精准移除（避免deque.remove()的O(n)复杂度）
+            self.subscribers = deque(
+                (cid, q) for cid, q in self.subscribers if cid != client_id
+            )
+        logger.info(f"订阅者离开 (ID:{client_id}), 剩余: {len(self.subscribers)}")
+
+    async def broadcast(self, message: str):
+        """向所有订阅者广播消息"""
+        event = f"data: {message}\n\n"  # 标准SSE格式
+        dead_clients = []
+
+        async with self.lock:
+            for client_id, queue in self.subscribers:
+                try:
+                    # 非阻塞放入消息，满队列时丢弃旧消息
+                    if queue.full():
+                        await queue.get()  # 丢弃最旧消息
+                    queue.put_nowait(event)
+                except Exception as e:
+                    logger.error(f"客户端 {client_id} 消息失败: {str(e)}")
+                    dead_clients.append(client_id)
+
+        # 清理失效连接
+        for cid in dead_clients:
+            await self.unsubscribe(cid)
 
 
-async def event_generator() -> AsyncGenerator[str, None]:
-    """事件生成器"""
-    while True:
-        # 等待新消息
-        message = await message_queue.get()
-        if message == "CLOSE":
-            break
-
-        # 格式化SSE消息
-        yield f"data: {json.dumps(message)}\n\n"
-        await asyncio.sleep(0.1)  # 避免过载
+# 全局单例管理器
+sse_manager = SSEManager()
 
