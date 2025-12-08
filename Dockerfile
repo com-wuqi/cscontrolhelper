@@ -2,7 +2,7 @@ FROM python:3.13-slim AS builder
 
 WORKDIR /apps
 
-RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+# RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 
 COPY requirements.txt .
 

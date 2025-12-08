@@ -1,9 +1,9 @@
 name: Build and Deploy
 
 on:
-  push:
-    branches: [ master ]
-    tags: [ 'v*.*.*' ]
+#  push:
+#    branches: [ master ]
+#    tags: [ 'v*.*.*' ]
   workflow_dispatch:
 
 env:
