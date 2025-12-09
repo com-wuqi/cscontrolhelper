@@ -62,6 +62,8 @@ async def user_player_scan(data: requestModel.ScanAndKill, session: SessionDep):
     killed_user = crudUser.get_user_by_student_id(student_id=data.killed_student_id, session=session)
     if killed_user is None:
         raise HTTPException(status_code=404, detail="killedUser does not exist")
+    if not killed_user.is_alive:
+        raise HTTPException(status_code=403, detail="could not scan the dead user")
     if compare_digest(user.team, killed_user.team):
         raise HTTPException(status_code=403, detail="could not kill the same group members")
     states = crudUser.change_user_alive_by_id(student_id=data.killed_student_id,alive=False,session=session)
