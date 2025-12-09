@@ -45,5 +45,8 @@ class Admin(SQLModel, table=True):
     password: str = Field(index=False, nullable=False)
     secret_key: str = Field(index=False,nullable=True)  # 登录凭证,由后端生成
 
-
+class GameConfig(SQLModel, table=True):
+    __tablename__ = "game_config"
+    id: int = Field(default=None, primary_key=True)
+    is_started: bool = Field(default=False, nullable=False)
 

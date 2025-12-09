@@ -3,7 +3,7 @@ from secrets import compare_digest
 from fastapi import APIRouter, HTTPException
 
 from .sse import push_message
-from ..crud import crudUser
+from ..crud import crudUser, crudPublic
 from ..crud.dbDependencies import SessionDep
 from ..dependencies import requestModel, secureHelper
 from ..dependencies.datamodel import *
@@ -51,6 +51,9 @@ async def user_register(data: requestModel.UserRegister, session: SessionDep):
 
 @router.post("/api/player/scan")
 async def user_player_scan(data: requestModel.ScanAndKill, session: SessionDep):
+    config = crudPublic.get_game_config(session=session)
+    if not config.is_started:
+        raise HTTPException(status_code=403, detail="Game is not started")
     user = crudUser.get_user_by_student_id(student_id=data.student_id, session=session)
     if not user.is_alive:
         raise HTTPException(status_code=403, detail="User was killed")

@@ -42,3 +42,8 @@ class AdminResurrect(BaseModel):
 
 class GetNameByStudentId(BaseModel):
     student_id: int
+
+class AdminChangeGameStatus(BaseModel):
+    id: int
+    secret_key: str
+    game_status: bool

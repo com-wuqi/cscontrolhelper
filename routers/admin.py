@@ -1,12 +1,14 @@
+from secrets import compare_digest
+
 from fastapi import APIRouter, HTTPException
+
+from .sse import push_message
+from ..crud import crudAdmin, crudUser, crudPublic
+from ..crud.dbDependencies import SessionDep
 from ..dependencies import requestModel, secureHelper
 from ..dependencies.datamodel import *
 from ..dependencies.responseModel import *
-from ..crud.dbDependencies import SessionDep
-from ..crud import crudAdmin,crudUser
 from ..depends import get_logger
-from secrets import compare_digest
-from .sse import push_message
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -65,3 +67,22 @@ async def resurrect(data: requestModel.AdminResurrect, session: SessionDep):
     if states is None:
         raise HTTPException(status_code=500, detail="could not change user statues")
     return {"message": "message resurrected successfully"}
+
+@router.post("/api/admin/changeGameStatus")
+async def change_game_status(data: requestModel.AdminChangeGameStatus, session: SessionDep):
+    # admin = crudAdmin.get_user_by_id(data.id, session=session)
+    # if admin is None:
+    #     raise HTTPException(status_code=404, detail="User does not exist")
+    # if not compare_digest(data.secret_key, admin.secret_key):
+    #     raise HTTPException(status_code=403, detail="Incorrect secret key")
+    config = crudPublic.get_game_config(session=session)
+    config.is_started = data.game_status
+    session.commit()
+    session.refresh(config)
+    if config.is_started:
+        msg = "游戏开始"
+    else:
+        msg = "游戏停止"
+    await push_message(message=msg)
+    return {"game_statues": f"{config.is_started}"}
+
